@@ -1,0 +1,56 @@
+{
+	"info": {
+		"_postman_id": "54fa19f7-4a13-4eed-98f6-4a226e4426bf",
+		"name": "AML Hackathon",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "26866618"
+	},
+	"item": [
+		{
+			"name": "get-oracle-data",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/oracle/oracle-data",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"oracle",
+						"oracle-data"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "update-oracle-data",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/oracle/oracle-data?msg=hi!",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"oracle",
+						"oracle-data"
+					],
+					"query": [
+						{
+							"key": "msg",
+							"value": "hi!"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

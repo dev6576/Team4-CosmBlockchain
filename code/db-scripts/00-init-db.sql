@@ -1,0 +1,2 @@
+CREATE DATABASE bitcoin;
+CREATE DATABASE ethereum;

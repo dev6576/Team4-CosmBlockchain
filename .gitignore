@@ -1,0 +1,4 @@
+.vscode
+data/btc/*
+data/eth/*
+*.DS_Store

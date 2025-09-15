@@ -1,0 +1,24 @@
+name = 'wfchain'
+gas_price = '0ustake'
+gas_adjustment = 1.3
+account_prefix = 'wasm'
+derivation_path = '''m/44'/118'/0'/0/0'''
+[networks.local]
+chain_id = 'testing'
+network_variant = 'Local'
+rpc_endpoint = 'http://localhost:26657'
+
+[accounts.alice]
+mnemonic = 'pony swap next infant awkward sheriff first ridge light away net shadow ankle meat copy various spell timber aerobic name atom excuse just gossip'
+
+[accounts.bob]
+mnemonic = 'mesh admit blade produce equip humor cluster chair arch loud like grant extend believe avocado hover dream market resist tobacco mass copper tide inherit'
+
+[accounts.charlie]
+mnemonic = 'artist still shield fit embark same follow lounge model dumb valid half snake deposit divorce develop color glory liberty elder flight silly swing audit'
+
+[accounts.admin]
+mnemonic = 'enemy flower party waste put south clip march victory breeze oxygen cram hospital march enlist black october surprise across wage bomb spawn describe heavy'
+
+[accounts.oracle]
+mnemonic = 'leopard run palm busy weasel comfort maze turkey canyon rural response predict ball scale coil tape organ dizzy paddle mystery fluid flight capital thing'
