@@ -1,6 +1,8 @@
 use cosmwasm_schema::QueryResponses;
 use cosmwasm_std::{Addr, Binary};
+use cosmwasm_std::Uint128;
 use sha2::{Sha256, Digest};
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct OracleDataResponse {
     pub data: Option<String>,
@@ -28,6 +30,7 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    Transfer { recipient: String, amount: Uint128 },
     Send { recipient: String },
     OracleDataUpdate { data: String, signature: Binary },
     UpdateOracle { new_pubkey: Binary, new_key_type: Option<String> },
@@ -46,4 +49,11 @@ pub enum QueryMsg {
     /// Returns: AdminResponse
     #[returns(AdminResponse)]
     GetAdmin {},
+    /// Returns: Some balance (example of existing query)
+    #[returns(Uint128)]
+    GetBalance { address: String },
+
+    /// Returns: true if flagged, false otherwise
+    #[returns(bool)]
+    CheckAML { wallet: String },
 }
