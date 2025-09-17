@@ -1,6 +1,6 @@
-\connect bitcoin;
+\connect aml_db;
 
-CREATE TABLE IF NOT EXISTS blocks (
+CREATE TABLE IF NOT EXISTS bitcoin_blocks (
     hash TEXT NOT NULL,
     size BIGINT,
     stripped_size BIGINT,
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     transaction_count BIGINT
 );
 
-CREATE TABLE IF NOT EXISTS inputs (
+CREATE TABLE IF NOT EXISTS bitcoin_inputs (
     transaction_hash TEXT,
     block_hash TEXT,
     block_number BIGINT,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS inputs (
 );
 
 
-CREATE TABLE IF NOT EXISTS outputs (
+CREATE TABLE IF NOT EXISTS bitcoin_outputs (
     transaction_hash TEXT,
     block_hash TEXT,
     block_number BIGINT,
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS outputs (
     value NUMERIC
 );
 
-CREATE TABLE IF NOT EXISTS transactions (
+CREATE TABLE IF NOT EXISTS bitcoin_transactions (
     hash TEXT NOT NULL,
     size BIGINT,
     virtual_size BIGINT,

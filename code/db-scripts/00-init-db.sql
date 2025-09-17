@@ -1,2 +1,1 @@
-CREATE DATABASE bitcoin;
-CREATE DATABASE ethereum;
+CREATE DATABASE aml_db;

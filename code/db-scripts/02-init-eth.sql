@@ -1,11 +1,11 @@
-\connect ethereum;
+\connect aml_db;
 
-CREATE TABLE IF NOT EXISTS balances (
+CREATE TABLE IF NOT EXISTS eth_balances (
     address TEXT NOT NULL,
     eth_balance NUMERIC
 );
 
-CREATE TABLE IF NOT EXISTS blocks (
+CREATE TABLE IF NOT EXISTS eth_blocks (
     timestamp TIMESTAMP NOT NULL,
     number BIGINT NOT NULL,
     hash TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS blocks (
 );
 
 
-CREATE TABLE IF NOT EXISTS contracts (
+CREATE TABLE IF NOT EXISTS eth_contracts (
     address TEXT NOT NULL,
     bytecode TEXT NOT NULL,
     function_sighashes TEXT,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS contracts (
     block_hash TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS load_metadata (
+CREATE TABLE IF NOT EXISTS eth_load_metadata (
     chain TEXT,
     load_all_partitions BOOLEAN,
     ds DATE,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS load_metadata (
     complete_at TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS logs (
+CREATE TABLE IF NOT EXISTS eth_logs (
     log_index BIGINT NOT NULL,
     transaction_hash TEXT NOT NULL,
     transaction_index BIGINT NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS logs (
     block_hash TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE IF NOT EXISTS eth_sessions (
     id TEXT NOT NULL,
     start_trace_id TEXT NOT NULL,
     start_block_number BIGINT NOT NULL,
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     contract_address TEXT
 );
 
-CREATE TABLE IF NOT EXISTS token_transfers (
+CREATE TABLE IF NOT EXISTS eth_token_transfers (
     token_address TEXT NOT NULL,
     from_address TEXT,
     to_address TEXT,
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS token_transfers (
     block_hash TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS tokens (
+CREATE TABLE IF NOT EXISTS eth_tokens (
     address TEXT NOT NULL,
     symbol TEXT,
     name TEXT,
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS tokens (
     block_hash TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS traces (
+CREATE TABLE IF NOT EXISTS eth_traces (
     transaction_hash TEXT,
     transaction_index BIGINT,
     from_address TEXT,
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS traces (
     trace_id TEXT
 );
 
-CREATE TABLE IF NOT EXISTS transactions (
+CREATE TABLE IF NOT EXISTS eth_transactions (
     hash TEXT NOT NULL,
     nonce BIGINT NOT NULL,
     transaction_index BIGINT NOT NULL,
