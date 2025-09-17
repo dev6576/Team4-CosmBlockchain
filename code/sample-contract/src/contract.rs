@@ -86,13 +86,14 @@ pub fn execute(
 /// -------------------- Send --------------------
 fn execute_send(deps: DepsMut, info: MessageInfo, recipient: String) -> StdResult<Response> {
     // Step 1: Query AML oracle
-    let is_flagged: bool = query_aml_status(deps.as_ref(), info.sender.to_string())?;
+    let (is_flagged, reason) = query_aml_status(deps.as_ref(), info.sender.to_string())?;
 
     // Step 2: Reject if flagged
     if is_flagged {
         return Ok(Response::new()
             .add_attribute("action", "send")
-            .add_attribute("status", "AML validation failed"));
+            .add_attribute("status", "AML validation failed")
+            .add_attribute("reason", reason));
     }
 
     // Step 3: Continue with normal send logic
@@ -220,7 +221,24 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 /// -------------------- AML Helper --------------------
-fn query_aml_status(_deps: Deps, _wallet: String) -> StdResult<bool> {
-    // Placeholder: integrate with oracle or flagged_wallets DB later
-    Ok(true)
+/// -------------------- AML Helper --------------------
+/// -------------------- AML Helper --------------------
+pub fn query_aml_status(deps: Deps, wallet: String) -> StdResult<(bool, String)> {
+    // Load last oracle update
+    let data = ORACLE_DATA.may_load(deps.storage)?;
+
+    if let Some(msg) = data {
+        // Expecting format: "wallet1:true:reason1,wallet2:false:,wallet3:true:reason3"
+        for entry in msg.split(',') {
+            let mut parts = entry.splitn(2, ':'); // split into 2 parts: wallet, reason
+            if let (Some(w), Some(reason)) = (parts.next(), parts.next()) {
+                if w == wallet {
+                    return Ok((true, reason.to_string()));
+                }
+            }
+        }
+    }
+
+    // Default to not flagged, empty reason
+    Ok((false, "No suspicious activity".to_string()))
 }
