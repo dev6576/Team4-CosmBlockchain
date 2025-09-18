@@ -53,7 +53,9 @@ pub fn execute(
 ) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Send { recipient } => execute_send(deps, info, recipient),
-        ExecuteMsg::Transfer { recipient, amount } => execute_transfer(deps, info, recipient, amount),
+        ExecuteMsg::Transfer { recipient, amount } => {
+            execute_transfer(deps, info, recipient, amount)
+        }
         ExecuteMsg::OracleDataUpdate { data, signature } => {
             execute_oracle_update(deps, env, info, data, signature)
         }
@@ -66,27 +68,42 @@ pub fn execute(
 
 /// -------------------- Send --------------------
 fn execute_send(deps: DepsMut, info: MessageInfo, recipient: String) -> StdResult<Response> {
-    // Check AML for sender
-    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &info.sender.to_string())? {
-        return Err(StdError::generic_err(format!(
-            "AML check failed: sender {} flagged for {}",
-            info.sender, reason
-        )));
+    let sender = info.sender.to_string();
+
+    // AML check sender
+    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &sender)? {
+        return Ok(Response::new()
+            .add_attribute("flagged_wallet", sender)
+            .add_attribute("reason", reason)
+            .add_attribute("status", "AML check failed"));
     }
 
-    // Check AML for recipient
+    // AML check recipient
     if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &recipient)? {
-        return Err(StdError::generic_err(format!(
-            "AML check failed: recipient {} flagged for {}",
-            recipient, reason
-        )));
+        return Ok(Response::new()
+            .add_attribute("flagged_wallet", recipient)
+            .add_attribute("reason", reason)
+            .add_attribute("status", "AML check failed"));
     }
 
+    // No fund amount to check for Send; just pass along
     let recipient_addr = deps.api.addr_validate(&recipient)?;
     let funds: Vec<Coin> = info.funds.clone();
 
     if funds.is_empty() {
         return Err(StdError::generic_err("no funds attached to Send"));
+    }
+
+    // Check for suspiciously large amounts (>10000ustake)
+    for coin in &funds {
+        if coin.denom == "ustake" && coin.amount.u128() > 10000 {
+            return Ok(Response::new()
+                .add_attribute("sender", sender.clone())
+                .add_attribute("recipient", recipient.clone())
+                .add_attribute("amount", coin.amount.to_string())
+                .add_attribute("status", "AML check failed")
+                .add_attribute("reason", "suspiciously large amount"));
+        }
     }
 
     let msg = BankMsg::Send {
@@ -96,7 +113,7 @@ fn execute_send(deps: DepsMut, info: MessageInfo, recipient: String) -> StdResul
 
     let event = Event::new("send")
         .add_attribute("action", "send")
-        .add_attribute("from", info.sender.to_string())
+        .add_attribute("from", sender)
         .add_attribute("to", recipient_addr.to_string())
         .add_attribute("amount", format!("{:?}", funds));
 
@@ -113,20 +130,32 @@ fn execute_transfer(
     recipient: String,
     amount: Uint128,
 ) -> StdResult<Response> {
-    // Check AML for sender
-    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &info.sender.to_string())? {
+    let sender = info.sender.to_string();
+
+    // AML check sender
+    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &sender)? {
         return Ok(Response::new()
-            .add_attribute("flagged_wallet", info.sender.to_string())
+            .add_attribute("flagged_wallet", sender)
             .add_attribute("reason", reason)
             .add_attribute("status", "AML check failed"));
     }
 
-    // Check AML for recipient
+    // AML check recipient
     if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &recipient)? {
         return Ok(Response::new()
             .add_attribute("flagged_wallet", recipient)
             .add_attribute("reason", reason)
             .add_attribute("status", "AML check failed"));
+    }
+
+    // Suspiciously large amount check
+    if amount.u128() > 10000 {
+        return Ok(Response::new()
+            .add_attribute("sender", sender)
+            .add_attribute("recipient", recipient)
+            .add_attribute("amount", amount.to_string())
+            .add_attribute("status", "AML check failed")
+            .add_attribute("reason", "suspiciously large amount"));
     }
 
     Ok(Response::new()
@@ -224,11 +253,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         }
         QueryMsg::GetBalance { address: _ } => to_binary(&Uint128::zero()), // stub
         QueryMsg::CheckAML { wallet } => {
-            let flagged = ORACLE_DATA.may_load(deps.storage, &wallet)?;
-            if let Some(reason) = flagged {
-                to_binary(&(true, reason))
+            if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &wallet)? {
+                to_binary(&(
+                    wallet,
+                    reason,
+                    "AML check failed".to_string()
+                ))
             } else {
-                to_binary(&(false, "No suspicious activity".to_string()))
+                to_binary(&(wallet, "No suspicious activity".to_string(), "OK".to_string()))
             }
         }
     }

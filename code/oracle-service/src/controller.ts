@@ -4,7 +4,7 @@ import { Secp256k1, sha256 } from "@cosmjs/crypto";
 import * as dotenv from "dotenv";
 import { getQueryClient, getClient } from "./setup";
 import asyncHandler from "express-async-handler";
-import { toBase64 } from "@cosmjs/encoding";
+import { fromBase64 } from "@cosmjs/encoding";
 
 dotenv.config();
 
@@ -25,11 +25,10 @@ const getOracleData = asyncHandler(async (req, res, next) => {
 // ==== Update Oracle Data ====
 const updateOracleData = asyncHandler(async (req, res, next) => {
     try {
-        const { msg } = req.query;
-        if (!msg) throw new Error("msg query parameter missing");
+        const { msg } = req.body;
 
         // Parse input JSON (objects with wallet + reason)
-        const msgData: OracleDataEntry[] = JSON.parse(msg as string);
+        const msgData: OracleDataEntry[] = msg;
 
         // Canonicalize into array-of-arrays for signing
         const canonicalData = msgData.map(d => [d.wallet, d.reason]);
@@ -41,7 +40,7 @@ const updateOracleData = asyncHandler(async (req, res, next) => {
         // Sign with secp256k1 (raw r||s format, 64 bytes)
         const signature = await Secp256k1.createSignature(msgHash, fromHex(priv_key));
         const rs = signature.toFixedLength(); // <-- this gives exactly 64 bytes
-        const signatureBase64 = toBase64(rs);
+        const signatureBase64 = Buffer.from(rs).toString("base64");
 
         console.log("Canonical data (signed):", JSON.stringify(canonicalData));
         console.log("Signature (base64 r||s):", signatureBase64);
