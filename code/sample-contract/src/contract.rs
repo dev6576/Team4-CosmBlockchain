@@ -1,4 +1,3 @@
-use base64;
 use cosmwasm_std::{
     entry_point, to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, Event, MessageInfo,
     Order, Response, StdError, StdResult, Uint128,
@@ -54,21 +53,7 @@ pub fn execute(
 ) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Send { recipient } => execute_send(deps, info, recipient),
-        ExecuteMsg::Transfer { recipient, amount } => {
-            let (is_flagged, reason) = query_aml_status(deps.as_ref(), info.sender.to_string())?;
-            if is_flagged {
-                return Ok(Response::new()
-                    .add_attribute("action", "transfer")
-                    .add_attribute("status", "AML validation failed")
-                    .add_attribute("reason", reason));
-            }
-
-            Ok(Response::new()
-                .add_attribute("action", "transfer")
-                .add_attribute("status", "success")
-                .add_attribute("to", recipient)
-                .add_attribute("amount", amount.to_string()))
-        }
+        ExecuteMsg::Transfer { recipient, amount } => execute_transfer(deps, info, recipient, amount),
         ExecuteMsg::OracleDataUpdate { data, signature } => {
             execute_oracle_update(deps, env, info, data, signature)
         }
@@ -81,13 +66,20 @@ pub fn execute(
 
 /// -------------------- Send --------------------
 fn execute_send(deps: DepsMut, info: MessageInfo, recipient: String) -> StdResult<Response> {
-    let (is_flagged, reason) = query_aml_status(deps.as_ref(), info.sender.to_string())?;
+    // Check AML for sender
+    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &info.sender.to_string())? {
+        return Err(StdError::generic_err(format!(
+            "AML check failed: sender {} flagged for {}",
+            info.sender, reason
+        )));
+    }
 
-    if is_flagged {
-        return Ok(Response::new()
-            .add_attribute("action", "send")
-            .add_attribute("status", "AML validation failed")
-            .add_attribute("reason", reason));
+    // Check AML for recipient
+    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &recipient)? {
+        return Err(StdError::generic_err(format!(
+            "AML check failed: recipient {} flagged for {}",
+            recipient, reason
+        )));
     }
 
     let recipient_addr = deps.api.addr_validate(&recipient)?;
@@ -114,13 +106,43 @@ fn execute_send(deps: DepsMut, info: MessageInfo, recipient: String) -> StdResul
         .add_attribute("status", "success"))
 }
 
+/// -------------------- Transfer --------------------
+fn execute_transfer(
+    deps: DepsMut,
+    info: MessageInfo,
+    recipient: String,
+    amount: Uint128,
+) -> StdResult<Response> {
+    // Check AML for sender
+    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &info.sender.to_string())? {
+        return Ok(Response::new()
+            .add_attribute("flagged_wallet", info.sender.to_string())
+            .add_attribute("reason", reason)
+            .add_attribute("status", "AML check failed"));
+    }
+
+    // Check AML for recipient
+    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &recipient)? {
+        return Ok(Response::new()
+            .add_attribute("flagged_wallet", recipient)
+            .add_attribute("reason", reason)
+            .add_attribute("status", "AML check failed"));
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "transfer")
+        .add_attribute("status", "success")
+        .add_attribute("to", recipient)
+        .add_attribute("amount", amount.to_string()))
+}
+
 /// -------------------- Oracle update --------------------
 fn execute_oracle_update(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
     data: Vec<OracleDataEntry>,
-    signature: Binary, // still Binary in CosmWasm, which wraps Vec<u8>
+    signature: Binary,
 ) -> StdResult<Response> {
     let pubkey = ORACLE_PUBKEY.load(deps.storage)?;
     let key_type = ORACLE_PUBKEY_TYPE.load(deps.storage)?;
@@ -141,7 +163,6 @@ fn execute_oracle_update(
 
     Ok(Response::new().add_event(event))
 }
-
 
 /// -------------------- Update Oracle --------------------
 fn execute_update_oracle(
@@ -201,20 +222,14 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let admin = ADMIN.load(deps.storage)?;
             to_binary(&AdminResponse { admin })
         }
-        QueryMsg::GetBalance { address: _ } => {
-            to_binary(&Uint128::zero()) // stub
-        }
+        QueryMsg::GetBalance { address: _ } => to_binary(&Uint128::zero()), // stub
         QueryMsg::CheckAML { wallet } => {
-            let flagged = query_aml_status(deps, wallet)?;
-            to_binary(&flagged)
+            let flagged = ORACLE_DATA.may_load(deps.storage, &wallet)?;
+            if let Some(reason) = flagged {
+                to_binary(&(true, reason))
+            } else {
+                to_binary(&(false, "No suspicious activity".to_string()))
+            }
         }
     }
-}
-
-/// -------------------- AML Helper --------------------
-pub fn query_aml_status(deps: Deps, wallet: String) -> StdResult<(bool, String)> {
-    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &wallet)? {
-        return Ok((true, reason));
-    }
-    Ok((false, "No suspicious activity".to_string()))
 }
