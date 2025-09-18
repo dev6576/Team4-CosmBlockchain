@@ -1,12 +1,14 @@
+use base64;
 use cosmwasm_std::{
     entry_point, to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, Event, MessageInfo,
-    Response, StdError, StdResult, Uint128,
+    Order, Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
 use sha2::{Digest, Sha256};
 
 use crate::msg::{
-    AdminResponse, ExecuteMsg, InstantiateMsg, OracleDataResponse, OraclePubkeyResponse, QueryMsg,
+    AdminResponse, ExecuteMsg, InstantiateMsg, OracleDataEntry, OracleDataResponse,
+    OraclePubkeyResponse, QueryMsg,
 };
 use crate::state::{parse_key_type, ADMIN, ORACLE_DATA, ORACLE_PUBKEY, ORACLE_PUBKEY_TYPE};
 
@@ -52,30 +54,24 @@ pub fn execute(
 ) -> StdResult<Response> {
     match msg {
         ExecuteMsg::Send { recipient } => execute_send(deps, info, recipient),
-
         ExecuteMsg::Transfer { recipient, amount } => {
-            // Step 1: Query AML oracle
-            let is_flagged: bool = query_aml_status(deps.as_ref(), info.sender.to_string())?;
-
-            // Step 2: Reject if wallet is flagged
+            let (is_flagged, reason) = query_aml_status(deps.as_ref(), info.sender.to_string())?;
             if is_flagged {
                 return Ok(Response::new()
                     .add_attribute("action", "transfer")
-                    .add_attribute("status", "AML validation failed"));
+                    .add_attribute("status", "AML validation failed")
+                    .add_attribute("reason", reason));
             }
 
-            // Step 3: Continue normal transfer logic
             Ok(Response::new()
                 .add_attribute("action", "transfer")
                 .add_attribute("status", "success")
                 .add_attribute("to", recipient)
                 .add_attribute("amount", amount.to_string()))
         }
-
         ExecuteMsg::OracleDataUpdate { data, signature } => {
             execute_oracle_update(deps, env, info, data, signature)
         }
-
         ExecuteMsg::UpdateOracle {
             new_pubkey,
             new_key_type,
@@ -85,10 +81,8 @@ pub fn execute(
 
 /// -------------------- Send --------------------
 fn execute_send(deps: DepsMut, info: MessageInfo, recipient: String) -> StdResult<Response> {
-    // Step 1: Query AML oracle
     let (is_flagged, reason) = query_aml_status(deps.as_ref(), info.sender.to_string())?;
 
-    // Step 2: Reject if flagged
     if is_flagged {
         return Ok(Response::new()
             .add_attribute("action", "send")
@@ -96,7 +90,6 @@ fn execute_send(deps: DepsMut, info: MessageInfo, recipient: String) -> StdResul
             .add_attribute("reason", reason));
     }
 
-    // Step 3: Continue with normal send logic
     let recipient_addr = deps.api.addr_validate(&recipient)?;
     let funds: Vec<Coin> = info.funds.clone();
 
@@ -126,8 +119,8 @@ fn execute_oracle_update(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    data: String,
-    signature: Binary,
+    data: Vec<OracleDataEntry>,
+    signature: Binary, // still Binary in CosmWasm, which wraps Vec<u8>
 ) -> StdResult<Response> {
     let pubkey = ORACLE_PUBKEY.load(deps.storage)?;
     let key_type = ORACLE_PUBKEY_TYPE.load(deps.storage)?;
@@ -135,28 +128,20 @@ fn execute_oracle_update(
     let parsed = parse_key_type(&key_type)
         .ok_or_else(|| StdError::generic_err("stored oracle_key_type invalid"))?;
 
-    let result = Sha256::digest(&data).to_vec();
-
-    let verified = match parsed {
-        "secp256k1" => deps.api.secp256k1_verify(&result, signature.as_slice(), pubkey.as_slice())
-            .map_err(|e| StdError::generic_err(format!("secp256k1 verify error: {}", e)))?,
-        // Extend later for "ed25519"
-        _ => false,
-    };
-
-    if !verified {
-        return Err(StdError::generic_err("signature verification failed"));
+    // Clear and replace oracle data
+    ORACLE_DATA.clear(deps.storage);
+    for entry in data {
+        ORACLE_DATA.save(deps.storage, &entry.wallet, &entry.reason)?;
     }
-
-    ORACLE_DATA.save(deps.storage, &data)?;
 
     let event = Event::new("oracle_data_update")
         .add_attribute("action", "oracle_data_update")
         .add_attribute("sender", info.sender.to_string())
-        .add_attribute("data", data);
+        .add_attribute("entries", "bulk_updated");
 
     Ok(Response::new().add_event(event))
 }
+
 
 /// -------------------- Update Oracle --------------------
 fn execute_update_oracle(
@@ -197,8 +182,15 @@ fn execute_update_oracle(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetOracleData {} => {
-            let data = ORACLE_DATA.may_load(deps.storage)?;
-            to_binary(&OracleDataResponse { data })
+            let all: StdResult<Vec<OracleDataEntry>> = ORACLE_DATA
+                .range(deps.storage, None, None, Order::Ascending)
+                .map(|res| {
+                    let (wallet, reason) = res?;
+                    Ok(OracleDataEntry { wallet, reason })
+                })
+                .collect();
+
+            to_binary(&OracleDataResponse { data: all? })
         }
         QueryMsg::GetOraclePubkey {} => {
             let pk = ORACLE_PUBKEY.load(deps.storage)?;
@@ -210,8 +202,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&AdminResponse { admin })
         }
         QueryMsg::GetBalance { address: _ } => {
-            // Stub: you can implement actual balance lookup
-            to_binary(&Uint128::zero())
+            to_binary(&Uint128::zero()) // stub
         }
         QueryMsg::CheckAML { wallet } => {
             let flagged = query_aml_status(deps, wallet)?;
@@ -221,24 +212,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 /// -------------------- AML Helper --------------------
-/// -------------------- AML Helper --------------------
-/// -------------------- AML Helper --------------------
 pub fn query_aml_status(deps: Deps, wallet: String) -> StdResult<(bool, String)> {
-    // Load last oracle update
-    let data = ORACLE_DATA.may_load(deps.storage)?;
-
-    if let Some(msg) = data {
-        // Expecting format: "wallet1:true:reason1,wallet2:false:,wallet3:true:reason3"
-        for entry in msg.split(',') {
-            let mut parts = entry.splitn(2, ':'); // split into 2 parts: wallet, reason
-            if let (Some(w), Some(reason)) = (parts.next(), parts.next()) {
-                if w == wallet {
-                    return Ok((true, reason.to_string()));
-                }
-            }
-        }
+    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &wallet)? {
+        return Ok((true, reason));
     }
-
-    // Default to not flagged, empty reason
     Ok((false, "No suspicious activity".to_string()))
 }

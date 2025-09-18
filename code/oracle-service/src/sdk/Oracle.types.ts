@@ -10,12 +10,17 @@ export interface InstantiateMsg {
   oracle_pubkey: Binary;
 }
 export type ExecuteMsg = {
+  transfer: {
+    amount: Uint128;
+    recipient: string;
+  };
+} | {
   send: {
     recipient: string;
   };
 } | {
   oracle_data_update: {
-    data: string;
+    data: OracleDataEntry[];
     signature: Binary;
   };
 } | {
@@ -24,19 +29,33 @@ export type ExecuteMsg = {
     new_pubkey: Binary;
   };
 };
+export type Uint128 = string;
+export interface OracleDataEntry {
+  reason: string;
+  wallet: string;
+}
 export type QueryMsg = {
   get_oracle_data: {};
 } | {
   get_oracle_pubkey: {};
 } | {
   get_admin: {};
+} | {
+  get_balance: {
+    address: string;
+  };
+} | {
+  check_a_m_l: {
+    wallet: string;
+  };
 };
+export type Boolean = boolean;
 export type Addr = string;
 export interface AdminResponse {
   admin: Addr;
 }
 export interface OracleDataResponse {
-  data?: string | null;
+  data: OracleDataEntry[];
 }
 export interface OraclePubkeyResponse {
   key_type: string;

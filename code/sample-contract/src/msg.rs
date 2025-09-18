@@ -1,59 +1,64 @@
-use cosmwasm_schema::QueryResponses;
-use cosmwasm_std::{Addr, Binary};
-use cosmwasm_std::Uint128;
-use sha2::{Sha256, Digest};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::{Addr, Binary, Uint128};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct OracleDataResponse {
-    pub data: Option<String>,
+/// Each oracle entry = one flagged wallet + reason
+#[cw_serde]
+pub struct OracleDataEntry {
+    pub wallet: String,
+    pub reason: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
+pub struct OracleDataResponse {
+    pub data: Vec<OracleDataEntry>,
+}
+
+#[cw_serde]
 pub struct OraclePubkeyResponse {
     pub pubkey: Binary,
     pub key_type: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct AdminResponse {
     pub admin: Addr,
 }
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[cw_serde]
 pub struct InstantiateMsg {
     pub oracle_pubkey: Binary,
     pub oracle_key_type: String, // "secp256k1" or "ed25519"
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 pub enum ExecuteMsg {
     Transfer { recipient: String, amount: Uint128 },
     Send { recipient: String },
-    OracleDataUpdate { data: String, signature: Binary },
+    /// Oracle pushes new dataset (signed JSON string from Flask)
+    OracleDataUpdate { data: Vec<OracleDataEntry>, signature: Binary },
     UpdateOracle { new_pubkey: Binary, new_key_type: Option<String> },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    /// Returns: OracleDataResponse
+    /// Returns all oracle data
     #[returns(OracleDataResponse)]
     GetOracleData {},
-    /// Returns: OraclePubkeyResponse
+
+    /// Returns oracle pubkey + type
     #[returns(OraclePubkeyResponse)]
     GetOraclePubkey {},
-    /// Returns: AdminResponse
+
+    /// Returns admin address
     #[returns(AdminResponse)]
     GetAdmin {},
-    /// Returns: Some balance (example of existing query)
+
+    /// Example balance query
     #[returns(Uint128)]
     GetBalance { address: String },
 
-    /// Returns: true if flagged, false otherwise
+    /// Returns true if flagged, false otherwise
     #[returns(bool)]
     CheckAML { wallet: String },
 }

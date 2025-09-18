@@ -6,12 +6,22 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Binary, InstantiateMsg, ExecuteMsg, QueryMsg, Addr, AdminResponse, OracleDataResponse, OraclePubkeyResponse } from "./Oracle.types";
+import { Binary, InstantiateMsg, ExecuteMsg, Uint128, OracleDataEntry, QueryMsg, Boolean, Addr, AdminResponse, OracleDataResponse, OraclePubkeyResponse } from "./Oracle.types";
 export interface OracleReadOnlyInterface {
   contractAddress: string;
   getOracleData: () => Promise<OracleDataResponse>;
   getOraclePubkey: () => Promise<OraclePubkeyResponse>;
   getAdmin: () => Promise<AdminResponse>;
+  getBalance: ({
+    address
+  }: {
+    address: string;
+  }) => Promise<Uint128>;
+  checkAML: ({
+    wallet
+  }: {
+    wallet: string;
+  }) => Promise<Boolean>;
 }
 export class OracleQueryClient implements OracleReadOnlyInterface {
   client: CosmWasmClient;
@@ -22,6 +32,8 @@ export class OracleQueryClient implements OracleReadOnlyInterface {
     this.getOracleData = this.getOracleData.bind(this);
     this.getOraclePubkey = this.getOraclePubkey.bind(this);
     this.getAdmin = this.getAdmin.bind(this);
+    this.getBalance = this.getBalance.bind(this);
+    this.checkAML = this.checkAML.bind(this);
   }
   getOracleData = async (): Promise<OracleDataResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
@@ -38,10 +50,39 @@ export class OracleQueryClient implements OracleReadOnlyInterface {
       get_admin: {}
     });
   };
+  getBalance = async ({
+    address
+  }: {
+    address: string;
+  }): Promise<Uint128> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      get_balance: {
+        address
+      }
+    });
+  };
+  checkAML = async ({
+    wallet
+  }: {
+    wallet: string;
+  }): Promise<Boolean> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      check_a_m_l: {
+        wallet
+      }
+    });
+  };
 }
 export interface OracleInterface extends OracleReadOnlyInterface {
   contractAddress: string;
   sender: string;
+  transfer: ({
+    amount,
+    recipient
+  }: {
+    amount: Uint128;
+    recipient: string;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   send: ({
     recipient
   }: {
@@ -51,7 +92,7 @@ export interface OracleInterface extends OracleReadOnlyInterface {
     data,
     signature
   }: {
-    data: string;
+    data: OracleDataEntry[];
     signature: Binary;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   updateOracle: ({
@@ -71,10 +112,25 @@ export class OracleClient extends OracleQueryClient implements OracleInterface {
     this.client = client;
     this.sender = sender;
     this.contractAddress = contractAddress;
+    this.transfer = this.transfer.bind(this);
     this.send = this.send.bind(this);
     this.oracleDataUpdate = this.oracleDataUpdate.bind(this);
     this.updateOracle = this.updateOracle.bind(this);
   }
+  transfer = async ({
+    amount,
+    recipient
+  }: {
+    amount: Uint128;
+    recipient: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      transfer: {
+        amount,
+        recipient
+      }
+    }, fee, memo, _funds);
+  };
   send = async ({
     recipient
   }: {
@@ -90,7 +146,7 @@ export class OracleClient extends OracleQueryClient implements OracleInterface {
     data,
     signature
   }: {
-    data: string;
+    data: OracleDataEntry[];
     signature: Binary;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
@@ -115,3 +171,4 @@ export class OracleClient extends OracleQueryClient implements OracleInterface {
     }, fee, memo, _funds);
   };
 }
+export type { OracleDataEntry, ExecuteMsg, QueryMsg };

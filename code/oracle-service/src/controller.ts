@@ -1,49 +1,71 @@
-import { OracleClient, OracleQueryClient } from "./sdk/Oracle.client"
+import { OracleClient, OracleQueryClient, OracleDataEntry } from "./sdk/Oracle.client";
 import { fromHex, toUtf8 } from "@cosmjs/encoding";
 import { Secp256k1, sha256 } from "@cosmjs/crypto";
-import * as dotenv from "dotenv"
+import * as dotenv from "dotenv";
 import { getQueryClient, getClient } from "./setup";
-import asyncHandler from "express-async-handler"
+import asyncHandler from "express-async-handler";
+import { toBase64 } from "@cosmjs/encoding";
 
-dotenv.config()
+dotenv.config();
 
-var oracle_client: OracleClient
-var query_client: OracleQueryClient
-var priv_key: string
+let oracle_client: OracleClient;
+let query_client: OracleQueryClient;
+let priv_key: string;
 
+// ==== Get Oracle Data ====
 const getOracleData = asyncHandler(async (req, res, next) => {
     try {
-        const pubkey = await query_client.getOracleData()
-        res.json(pubkey);
+        const data = await query_client.getOracleData();
+        res.json(data);
     } catch (error) {
         next(error);
     }
 });
 
+// ==== Update Oracle Data ====
 const updateOracleData = asyncHandler(async (req, res, next) => {
     try {
         const { msg } = req.query;
-        const msgBytes = toUtf8(msg as string); 
+        if (!msg) throw new Error("msg query parameter missing");
+
+        // Parse input JSON (objects with wallet + reason)
+        const msgData: OracleDataEntry[] = JSON.parse(msg as string);
+
+        // Canonicalize into array-of-arrays for signing
+        const canonicalData = msgData.map(d => [d.wallet, d.reason]);
+
+        // Serialize + hash
+        const msgBytes = toUtf8(JSON.stringify(canonicalData));
         const msgHash = sha256(msgBytes);
+
+        // Sign with secp256k1 (raw r||s format, 64 bytes)
         const signature = await Secp256k1.createSignature(msgHash, fromHex(priv_key));
+        const rs = signature.toFixedLength(); // <-- this gives exactly 64 bytes
+        const signatureBase64 = toBase64(rs);
 
-        // Convert ExtendedSig → 64 bytes r||s
-        const rs = signature.toFixedLength().slice(0, 64);
-        console.log("byte length: ", rs.byteLength)
+        console.log("Canonical data (signed):", JSON.stringify(canonicalData));
+        console.log("Signature (base64 r||s):", signatureBase64);
+        
 
-        const signatureBase64 = Buffer.from(rs).toString('base64');
-        console.log("r||s signature (base64):", signatureBase64);
+        // Send update to oracle contract
+        const result = await oracle_client.oracleDataUpdate({
+        data: msgData,
+        signature: signatureBase64, // ✅ matches string type
+        });
 
-        const result = await oracle_client.oracleDataUpdate({data: msg as string, signature: signatureBase64})
-        console.log(result)
-        res.sendStatus(200)
+        console.log("Oracle update result:", result);
+        res.sendStatus(200);
     } catch (error) {
         next(error);
     }
 });
 
+// ==== Initialize Clients ====
 (async () => {
-    priv_key = process.env.ORACLE_PRIVKEY!
+    priv_key = process.env.ORACLE_PRIVKEY!;
+    if (!priv_key) {
+        throw new Error("ORACLE_PRIVKEY missing in .env");
+    }
     oracle_client = await getClient();
     query_client = await getQueryClient();
 })();
@@ -51,4 +73,4 @@ const updateOracleData = asyncHandler(async (req, res, next) => {
 export {
     getOracleData,
     updateOracleData
-}
+};
