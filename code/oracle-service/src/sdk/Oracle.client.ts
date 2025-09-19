@@ -171,4 +171,4 @@ export class OracleClient extends OracleQueryClient implements OracleInterface {
     }, fee, memo, _funds);
   };
 }
-export type { OracleDataEntry, ExecuteMsg, QueryMsg };
+export type { OracleDataEntry }; 

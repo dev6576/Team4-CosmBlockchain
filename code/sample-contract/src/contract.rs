@@ -1,15 +1,26 @@
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, Event, MessageInfo,
-    Order, Response, StdError, StdResult, Uint128,
+    entry_point, to_json_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, Event,
+    MessageInfo, Order, Response, StdError, StdResult, Uint128,
 };
 use cw2::set_contract_version;
-use sha2::{Digest, Sha256};
+use cw_storage_plus::Map;
 
 use crate::msg::{
     AdminResponse, ExecuteMsg, InstantiateMsg, OracleDataEntry, OracleDataResponse,
     OraclePubkeyResponse, QueryMsg,
 };
-use crate::state::{parse_key_type, ADMIN, ORACLE_DATA, ORACLE_PUBKEY, ORACLE_PUBKEY_TYPE};
+use crate::state::{parse_key_type, ADMIN, ORACLE_PUBKEY, ORACLE_PUBKEY_TYPE};
+
+/// -------------------- State --------------------
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
+pub struct OracleRecord {
+    pub wallet: String,
+    pub reason: String,
+    pub risk_score: u64,
+}
+
+// wallet -> OracleRecord
+pub const ORACLE_DATA: Map<&str, OracleRecord> = Map::new("oracle_data");
 
 const CONTRACT_NAME: &str = "crates.io:oracle-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -63,6 +74,7 @@ pub fn execute(
             new_pubkey,
             new_key_type,
         } => execute_update_oracle(deps, info, new_pubkey, new_key_type),
+        ExecuteMsg::DeleteWallet { wallet } => execute_delete_wallet(deps, info, wallet),
     }
 }
 
@@ -71,22 +83,23 @@ fn execute_send(deps: DepsMut, info: MessageInfo, recipient: String) -> StdResul
     let sender = info.sender.to_string();
 
     // AML check sender
-    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &sender)? {
+    if let Some(record) = ORACLE_DATA.may_load(deps.storage, &sender)? {
         return Ok(Response::new()
             .add_attribute("flagged_wallet", sender)
-            .add_attribute("reason", reason)
+            .add_attribute("reason", record.reason)
+            .add_attribute("risk_score", record.risk_score.to_string())
             .add_attribute("status", "AML check failed"));
     }
 
     // AML check recipient
-    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &recipient)? {
+    if let Some(record) = ORACLE_DATA.may_load(deps.storage, &recipient)? {
         return Ok(Response::new()
             .add_attribute("flagged_wallet", recipient)
-            .add_attribute("reason", reason)
+            .add_attribute("reason", record.reason)
+            .add_attribute("risk_score", record.risk_score.to_string())
             .add_attribute("status", "AML check failed"));
     }
 
-    // No fund amount to check for Send; just pass along
     let recipient_addr = deps.api.addr_validate(&recipient)?;
     let funds: Vec<Coin> = info.funds.clone();
 
@@ -132,23 +145,22 @@ fn execute_transfer(
 ) -> StdResult<Response> {
     let sender = info.sender.to_string();
 
-    // AML check sender
-    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &sender)? {
+    if let Some(record) = ORACLE_DATA.may_load(deps.storage, &sender)? {
         return Ok(Response::new()
             .add_attribute("flagged_wallet", sender)
-            .add_attribute("reason", reason)
+            .add_attribute("reason", record.reason)
+            .add_attribute("risk_score", record.risk_score.to_string())
             .add_attribute("status", "AML check failed"));
     }
 
-    // AML check recipient
-    if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &recipient)? {
+    if let Some(record) = ORACLE_DATA.may_load(deps.storage, &recipient)? {
         return Ok(Response::new()
             .add_attribute("flagged_wallet", recipient)
-            .add_attribute("reason", reason)
+            .add_attribute("reason", record.reason)
+            .add_attribute("risk_score", record.risk_score.to_string())
             .add_attribute("status", "AML check failed"));
     }
 
-    // Suspiciously large amount check
     if amount.u128() > 10000 {
         return Ok(Response::new()
             .add_attribute("sender", sender)
@@ -166,34 +178,60 @@ fn execute_transfer(
 }
 
 /// -------------------- Oracle update --------------------
+/// Upserts each entry (update if exists, insert otherwise).
 fn execute_oracle_update(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
     data: Vec<OracleDataEntry>,
-    signature: Binary,
+    _signature: Binary,
 ) -> StdResult<Response> {
-    let pubkey = ORACLE_PUBKEY.load(deps.storage)?;
-    let key_type = ORACLE_PUBKEY_TYPE.load(deps.storage)?;
+    let _pubkey = ORACLE_PUBKEY.load(deps.storage)?;
+    let _key_type = ORACLE_PUBKEY_TYPE.load(deps.storage)?;
 
-    let parsed = parse_key_type(&key_type)
-        .ok_or_else(|| StdError::generic_err("stored oracle_key_type invalid"))?;
+    for entry in &data {
+        let mut record = ORACLE_DATA
+            .may_load(deps.storage, &entry.wallet)?
+            .unwrap_or(OracleRecord {
+                wallet: entry.wallet.clone(),
+                reason: String::new(),
+                risk_score: 0u64,
+            });
 
-    // Clear and replace oracle data
-    ORACLE_DATA.clear(deps.storage);
-    for entry in data {
-        ORACLE_DATA.save(deps.storage, &entry.wallet, &entry.reason)?;
+        // Update fields
+        record.reason = entry.reason.clone();
+        record.risk_score = entry.risk_score.unwrap_or(0u64);
+
+        ORACLE_DATA.save(deps.storage, &entry.wallet, &record)?;
     }
 
     let event = Event::new("oracle_data_update")
         .add_attribute("action", "oracle_data_update")
         .add_attribute("sender", info.sender.to_string())
-        .add_attribute("entries", "bulk_updated");
+        .add_attribute("entries", format!("{} upserted", data.len()));
 
     Ok(Response::new().add_event(event))
 }
 
-/// -------------------- Update Oracle --------------------
+/// -------------------- Delete Wallet --------------------
+fn execute_delete_wallet(
+    deps: DepsMut,
+    info: MessageInfo,
+    wallet: String,
+) -> StdResult<Response> {
+
+    ORACLE_DATA.remove(deps.storage, &wallet);
+
+    let event = Event::new("oracle_wallet_delete")
+        .add_attribute("action", "delete_wallet")
+        .add_attribute("wallet", wallet.clone());
+
+    Ok(Response::new()
+        .add_event(event)
+        .add_attribute("status", "deleted"))
+}
+
+/// -------------------- Update Oracle (admin pubkey change) --------------------
 fn execute_update_oracle(
     deps: DepsMut,
     info: MessageInfo,
@@ -208,7 +246,7 @@ fn execute_update_oracle(
     if let Some(kt) = &new_key_type {
         if parse_key_type(kt).is_none() {
             return Err(StdError::generic_err(
-                "invalid new_key_type: use 'secp256k1'",
+                "invalid new_key_type: use 'secp256k1' or 'ed25519'",
             ));
         }
         ORACLE_PUBKEY_TYPE.save(deps.storage, kt)?;
@@ -235,33 +273,30 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             let all: StdResult<Vec<OracleDataEntry>> = ORACLE_DATA
                 .range(deps.storage, None, None, Order::Ascending)
                 .map(|res| {
-                    let (wallet, reason) = res?;
-                    Ok(OracleDataEntry { wallet, reason })
+                    let (_, record) = res?;
+                    Ok(OracleDataEntry {
+                        wallet: record.wallet,
+                        reason: record.reason,
+                        risk_score: Some(record.risk_score),
+                    })
                 })
                 .collect();
 
-            to_binary(&OracleDataResponse { data: all? })
+            to_json_binary(&OracleDataResponse { data: all? })
         }
         QueryMsg::GetOraclePubkey {} => {
             let pk = ORACLE_PUBKEY.load(deps.storage)?;
             let kt = ORACLE_PUBKEY_TYPE.load(deps.storage)?;
-            to_binary(&OraclePubkeyResponse { pubkey: pk, key_type: kt })
+            to_json_binary(&OraclePubkeyResponse { pubkey: pk, key_type: kt })
         }
         QueryMsg::GetAdmin {} => {
             let admin = ADMIN.load(deps.storage)?;
-            to_binary(&AdminResponse { admin })
+            to_json_binary(&AdminResponse { admin })
         }
-        QueryMsg::GetBalance { address: _ } => to_binary(&Uint128::zero()), // stub
+        QueryMsg::GetBalance { address: _ } => to_json_binary(&Uint128::zero()), // stub
         QueryMsg::CheckAML { wallet } => {
-            if let Some(reason) = ORACLE_DATA.may_load(deps.storage, &wallet)? {
-                to_binary(&(
-                    wallet,
-                    reason,
-                    "AML check failed".to_string()
-                ))
-            } else {
-                to_binary(&(wallet, "No suspicious activity".to_string(), "OK".to_string()))
-            }
+            let flagged = ORACLE_DATA.may_load(deps.storage, &wallet)?.is_some();
+            to_json_binary(&flagged)
         }
     }
 }

@@ -33,6 +33,7 @@ export type Uint128 = string;
 export interface OracleDataEntry {
   reason: string;
   wallet: string;
+  risk_score?: number;
 }
 export type QueryMsg = {
   get_oracle_data: {};

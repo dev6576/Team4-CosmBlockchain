@@ -1,11 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary, Uint128};
 
-/// Each oracle entry = one flagged wallet + reason
+/// Each oracle entry = one flagged wallet + reason + optional risk score
 #[cw_serde]
 pub struct OracleDataEntry {
     pub wallet: String,
     pub reason: String,
+    pub risk_score: Option<u64>,
 }
 
 #[cw_serde]
@@ -34,9 +35,15 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     Transfer { recipient: String, amount: Uint128 },
     Send { recipient: String },
+
     /// Oracle pushes new dataset (signed JSON string from Flask)
     OracleDataUpdate { data: Vec<OracleDataEntry>, signature: Binary },
+
+    /// Admin updates oracle key
     UpdateOracle { new_pubkey: Binary, new_key_type: Option<String> },
+
+    /// Admin can delete a wallet from oracle data
+    DeleteWallet { wallet: String },
 }
 
 #[cw_serde]
@@ -58,7 +65,7 @@ pub enum QueryMsg {
     #[returns(Uint128)]
     GetBalance { address: String },
 
-    /// Returns true if flagged, false otherwise
+    /// Returns AML check status (true if flagged, false otherwise)
     #[returns(bool)]
     CheckAML { wallet: String },
 }
