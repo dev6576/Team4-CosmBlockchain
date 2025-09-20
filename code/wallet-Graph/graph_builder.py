@@ -110,46 +110,46 @@ def build_wallet_graph():
     # Risk propagation (efficient BFS)
     # ------------------------------
     print("[INFO] Propagating risk scores...")
-    # risk_scores = {n: G.nodes[n]["risk_score"] for n in G.nodes}
-    # flagged_nodes = [n for n, d in G.nodes(data=True) if d.get("flagged")]
-    # for node in flagged_nodes:
-    #     risk_scores[node] = MAX_RISK
+    risk_scores = {n: G.nodes[n]["risk_score"] for n in G.nodes}
+    flagged_nodes = [n for n, d in G.nodes(data=True) if d.get("flagged")]
+    for node in flagged_nodes:
+        risk_scores[node] = MAX_RISK
 
-    # # Multi-hop BFS: 1,2,3 hops, decaying risk
-    # for flagged in tqdm(flagged_nodes, desc="Propagating from flagged wallets"):
-    #     lengths = nx.single_source_shortest_path_length(G.to_undirected(), flagged, cutoff=3)
-    #     for node, dist in lengths.items():
-    #         if node in flagged_nodes:
-    #             continue
-    #         # Combine risk: decay with hop, + number of flagged sources
-    #         incremental_risk = MAX_RISK / dist
-    #         risk_scores[node] = min(MAX_RISK, risk_scores.get(node,0) + incremental_risk)
+    # Multi-hop BFS: 1,2,3 hops, decaying risk
+    for flagged in tqdm(flagged_nodes, desc="Propagating from flagged wallets"):
+        lengths = nx.single_source_shortest_path_length(G.to_undirected(), flagged, cutoff=3)
+        for node, dist in lengths.items():
+            if node in flagged_nodes:
+                continue
+            # Combine risk: decay with hop, + number of flagged sources
+            incremental_risk = MAX_RISK / dist
+            risk_scores[node] = min(MAX_RISK, risk_scores.get(node,0) + incremental_risk)
 
-    # # Update graph
-    # for node, risk in risk_scores.items():
-    #     G.nodes[node]["risk_score"] = min(risk, MAX_RISK)
-    #     if risk >= 1:
-    #         G.nodes[node]["flagged"] = True
-    #         G.nodes[node]["flagged_reason"] = "Proximity to risky wallets"
+    # Update graph
+    for node, risk in risk_scores.items():
+        G.nodes[node]["risk_score"] = min(risk, MAX_RISK)
+        if risk >= 1:
+            G.nodes[node]["flagged"] = True
+            G.nodes[node]["flagged_reason"] = "Proximity to risky wallets"
 
-    # ------------------------------
-    # Batch update DB
-    # ------------------------------
-    # flagged_to_upsert = [(n, d["flagged_reason"], d["risk_score"])
-    #                      for n,d in G.nodes(data=True) if d["flagged"]]
-    # if flagged_to_upsert:
-    #     execute_values(cur, """
-    #         INSERT INTO flagged_wallets (wallet_id, reason, risk_score)
-    #         VALUES %s
-    #         ON CONFLICT (wallet_id) DO UPDATE
-    #         SET reason = EXCLUDED.reason,
-    #             risk_score = GREATEST(flagged_wallets.risk_score, EXCLUDED.risk_score)
-    #     """, flagged_to_upsert)
-    #     conn.commit()
+    #------------------------------
+    Batch update DB
+    #------------------------------
+    flagged_to_upsert = [(n, d["flagged_reason"], d["risk_score"])
+                         for n,d in G.nodes(data=True) if d["flagged"]]
+    if flagged_to_upsert:
+        execute_values(cur, """
+            INSERT INTO flagged_wallets (wallet_id, reason, risk_score)
+            VALUES %s
+            ON CONFLICT (wallet_id) DO UPDATE
+            SET reason = EXCLUDED.reason,
+                risk_score = GREATEST(flagged_wallets.risk_score, EXCLUDED.risk_score)
+        """, flagged_to_upsert)
+        conn.commit()
 
-    # cur.close()
-    # conn.close()
-    # print("[INFO] Graph building and risk propagation completed")
+    cur.close()
+    conn.close()
+    print("[INFO] Graph building and risk propagation completed")
     return G
 
 # ------------------------------
