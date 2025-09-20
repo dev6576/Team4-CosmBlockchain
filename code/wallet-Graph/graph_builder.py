@@ -133,7 +133,7 @@ def build_wallet_graph():
             G.nodes[node]["flagged_reason"] = "Proximity to risky wallets"
 
     #------------------------------
-    Batch update DB
+    # Batch update DB
     #------------------------------
     flagged_to_upsert = [(n, d["flagged_reason"], d["risk_score"])
                          for n,d in G.nodes(data=True) if d["flagged"]]
