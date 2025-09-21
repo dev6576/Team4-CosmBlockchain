@@ -100,9 +100,9 @@ async function processNextTransaction(oracleClient: NewOracleClient) {
 async function startPolling() {
   const oracleClient = await initOracleClient();
   console.log("Oracle client initialized. Starting polling...");
-
+ 
   setInterval(() => {
-    processNextTransaction(oracleClient);
+     processNextTransaction(oracleClient);
   }, POLL_INTERVAL_MS);
 }
 
