@@ -1,0 +1,5 @@
+wallet_address,reason,risk_score,source
+1BoatSLRHtKNngkdXEeobR76b53LETtpyT,mixer,10,Known Mixer
+3FZbgi29cpjq2GjdwV8eyHuJJnkLtktZc5,phishing,10,Phishing Report
+bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq,ransomware,10,Ransomware Campaign
+0x742d35Cc6634C0532925a3b844Bc454e4438f44e,scam,10,Scam Report
