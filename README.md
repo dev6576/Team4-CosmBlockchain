@@ -1,6 +1,15 @@
 # 🚀 Team4-CosmBlockchain
 
-This project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration.
+This project is an **end-to-end AML monitoring system** for blockchain transactions. From the time a transaction is initiated on-chain, the system:
+
+1. Receives a transfer request from a smart contract.
+2. Performs automated AML checks via the Oracle and AML server (including sanctions list checks, heuristic analyses, and ML-based risk scoring).
+3. Stores transaction and wallet information in a database.
+4. Allows humans to analyze wallet and subgraph data using interactive graph visualizations and MCP tools to detect potential high-risk or suspicious activity.
+
+This ensures continuous monitoring and supports both automated and human-led compliance workflows.
+
+The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration.
 
 ---
 
@@ -52,6 +61,20 @@ Start the oracle service:
 cd code\oracle-service
 npx ts-node src/index.ts
 ```
+
+---
+
+## 🧪 AML Check Server
+
+The AML check server handles direct AML verification requests via REST API.
+
+Start the AML check server:
+
+```powershell
+python code\oracle-service\aml_check.py
+```
+
+This will launch a server on `http://127.0.0.1:6000/aml-check` where AML verification requests can be sent.
 
 ---
 
@@ -174,6 +197,20 @@ Rejected transfer:
 }
 ```
 
+### Additional Queries
+
+* **GetPendingTx** → Returns transaction info from a given ID
+
+```json
+{ "GetPendingTx": { "id": 7 } }
+```
+
+* **GetNextId** → Returns the next transaction ID to be checked
+
+```json
+{ "GetNextId": {} }
+```
+
 ### AML-check REST Endpoint (PowerShell)
 
 ```powershell
@@ -237,6 +274,7 @@ This system combines:
 
 * Blockchain smart contracts for transaction monitoring.
 * An **Oracle Service** bridging AML APIs and the blockchain.
+* **AML Check Server** for REST-based AML verification requests.
 * **Scheduler** to update sanctions lists and heuristics continuously.
 * **Graph Analytics** for wallet clustering and ML anomaly detection.
 * **MCP server** for programmatic access to AML data and wallet subgraphs.
