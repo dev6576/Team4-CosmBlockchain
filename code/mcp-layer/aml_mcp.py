@@ -1,11 +1,13 @@
-# server.py
+#! D:/GitHub/Team4-CosmBlockchain/code/oracle-service/venv/Scripts/python.exe
 import os
 import pickle
 import psycopg2
-from fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP   # <-- correct import for MCP runner
 from psycopg2.extras import RealDictCursor
 import networkx as nx
 from pyvis.network import Network
+import sys
+
 
 # ==== CONFIG ====
 DB_CONFIG = {
@@ -17,11 +19,9 @@ DB_CONFIG = {
 }
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-GRAPH_FILE = os.path.join(BASE_PATH, "wallet_graph.pkl")  # your pre-built graph
-
-
+GRAPH_FILE = os.path.join(BASE_PATH, "wallet_graph.pkl") 
 # ==== INIT MCP ====
-mcp = FastMCP("AML-Wallet-Graph-MCP")
+mcp = FastMCP("AML-Wallet-Graph-MCP")   
 
 
 # ------------------------------
@@ -56,7 +56,7 @@ def db_schema() -> str:
 @mcp.tool()
 def db_query(sql: str) -> list:
     """
-    Execute a SQL query against the AML database and return results as JSON. Make sure you have the schema information from the tool before executing this
+    Execute a SQL query against the AML database and return results as JSON.
     Input: SQL string
     Output: List of rows (dict)
     """
@@ -76,7 +76,7 @@ def db_query(sql: str) -> list:
 
 
 # ------------------------------
-# Tool 3: Build wallet subgraph from .pkl
+# Tool 3: Build wallet subgraph
 # ------------------------------
 @mcp.tool()
 def build_wallet_graph(wallet_id: str, max_hops: int = 2, output_file: str = "wallet_subgraph.html") -> str:
@@ -108,7 +108,10 @@ def build_wallet_graph(wallet_id: str, max_hops: int = 2, output_file: str = "wa
     net = Network(height="750px", width="100%", bgcolor="white", font_color="black", directed=True)
     for n, d in SG.nodes(data=True):
         label = n[:10] + "..." if len(n) > 10 else n
-        color = "red" if d.get("risk_score", 0) > 0.7 else "blue"
+        if n == wallet_id:
+            color = "purple"   # highlight the root wallet
+        else:
+            color = "red" if d.get("risk_score", 0) > 0.7 else "blue"
         net.add_node(n, label=label, title=str(d), color=color)
     for u, v, d in SG.edges(data=True):
         net.add_edge(u, v, title=str(d))
@@ -117,7 +120,3 @@ def build_wallet_graph(wallet_id: str, max_hops: int = 2, output_file: str = "wa
     net.write_html(output_path)
     return output_path
 
-
-# ==== RUN ====
-if __name__ == "__main__":
-    mcp.run()
