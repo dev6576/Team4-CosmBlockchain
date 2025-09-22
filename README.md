@@ -135,6 +135,8 @@ The AML system uses a **Graph Neural Network (GNN) / DNN** for risk classificati
 * Clustering coefficient
 * Historical risk score aggregation
 
+The current model has a risk score of 98.04%
+
 ### Model Workflow
 ![Architecture](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Architecture.png)
 1. Load transaction graph from database.
