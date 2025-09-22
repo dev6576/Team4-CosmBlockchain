@@ -1,6 +1,6 @@
 # 🚀 Team4-CosmBlockchain
 
-This project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, and graph visualization tools.
+This project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration.
 
 ---
 
@@ -19,7 +19,6 @@ docker run -d --name postgres_new `
   -e POSTGRES_PASSWORD=password `
   -p 5433:5432 postgres:15
 ```
-The above script is then later loaded with the initial data load from wfblockchain/wfHackathon, but with the modified scripts in this repo.
 
 ### 2. Load schema
 
@@ -35,9 +34,10 @@ docker exec -i postgres_new psql -U postgres -d aml_db -f /create_flagged_wallet
 
 ## ⚙️ Local Setup
 
-### Install Flask
+### Python Dependencies
+
 ```bash
-pip install flask
+pip install flask fastmcp psycopg2 networkx pyvis apscheduler
 ```
 
 ---
@@ -57,27 +57,23 @@ npx ts-node src/index.ts
 
 ## 🕒 Scheduler Service
 
-We use **APScheduler** to run periodic heuristic and sanctions checks.
+We use **APScheduler** to run periodic heuristic and sanctions checks. The scheduler can be started manually:
 
-Run the scheduler:
 ```powershell
 python code\data-helper\python-scripts\scheduler.py
 ```
 
-### Scheduling Frequencies
-- **Heuristic checks** (`Mixer_check.py`, `Peeling_chains.py`, `Structuring_check.py`) → every **6 hours**
-- **OFAC sanctions list update** (`OFACSanctionScript.py`) → every **24 hours**
-- **Third-party data ingestion** (`third_party_data.py`) → every **12 hours**
+### Scheduled Tasks
 
----
+| Script                  | Purpose                          | Frequency      |
+| ----------------------- | -------------------------------- | -------------- |
+| `Mixer_check.py`        | Detect potential mixing activity | Every 6 hours  |
+| `Peeling_chains.py`     | Track peeling chain transactions | Every 6 hours  |
+| `Structuring_check.py`  | Detect structuring patterns      | Every 6 hours  |
+| `OFACSanctionScript.py` | Update OFAC sanctions list       | Every 24 hours |
+| `third_party_data.py`   | Ingest external data sources     | Every 12 hours |
 
-## 🧠 AML Server
-
-The AML service can also be run directly for checks:
-
-```powershell
-python code\oracle-service\aml_check.py
-```
+The scheduler ensures the AML system is continuously updated with the latest heuristics and sanctions data.
 
 ---
 
@@ -89,16 +85,53 @@ To visualize the wallet transaction graph, run:
 python code\wallet-Graph\graph_builder.py
 ```
 
-This will load transaction data from the database, construct the graph, and help detect suspicious wallet clusters.
+This generates an interactive graph where:
 
-Open wallet_graph.html to view the interactive graph.
+* **Nodes** represent wallets. Node color indicates risk: purple = root wallet, red = high risk, blue = low risk.
+* **Edges** represent transactions, with attributes such as amount and timestamp.
+* Neighborhood subgraphs can be generated to explore wallet connections up to N hops.
+
+![Graph Structure](architecture/arch/Graph.png)
+
+The full transaction graph is stored in `wallet_graph.pkl` and can be used by the MCP server to generate subgraphs on demand.
+
 ---
 
-## 🧪 Sample Contract Queries
+## 🧠 ML Layer
 
-Once the blockchain is running, you can test with:
+The AML system uses a **Graph Neural Network (GNN) / DNN** for risk classification.
+
+### Features Extracted per Wallet Node
+
+* Transaction frequency and amounts
+* Counterparty diversity
+* In-degree and out-degree
+* Graph centrality measures (betweenness, closeness)
+* Clustering coefficient
+* Historical risk score aggregation
+
+### Model Workflow
+
+1. Load transaction graph from database.
+2. Extract node features and construct adjacency matrix.
+3. Train GNN/DNN on labeled historical data.
+4. Evaluate and classify wallets as **low, medium, or high risk**.
+5. Store predictions in database for the AML oracle to use in decision-making.
+
+![ML & Graph Architecture](architecture/arch/Architecture.png)
+
+### Transaction Flow
+
+![Transaction Flow](architecture/arch/TransactionFlow.png)
+
+This flow shows how a transfer request triggers an AML check, how the oracle queries the ML model and sanctions lists, and how the response is written back on-chain.
+
+---
+
+## 🧪 Smart Contract Testing (CosmWasm)
 
 ### Request Transfer
+
 ```json
 {
   "RequestTransfer": {
@@ -110,51 +143,100 @@ Once the blockchain is running, you can test with:
   }
 }
 ```
-The orace-service would pick this up, conduct the AML check, and accept/reject the transaction.
 
-Other Smart contract queries:
-### Get Pending Transaction
+### Oracle Response
+
+Approved transfer:
+
 ```json
 {
-  "GetPendingTx": {
-    "id": 1
+  "OracleResponse": {
+    "request_id": 3,
+    "approved": true,
+    "flagged": false,
+    "reason": "",
+    "risk_score": 0
   }
 }
 ```
 
-### Get Next ID
+Rejected transfer:
+
 ```json
 {
-  "GetNextId": {}
+  "OracleResponse": {
+    "request_id": 3,
+    "approved": false,
+    "flagged": true,
+    "reason": "OFAC sanctioned sender",
+    "risk_score": 10
+  }
 }
+```
+
+### AML-check REST Endpoint (PowerShell)
+
+```powershell
+$body = @{
+    sender    = "wasm1sse6pdmn5s7epjycxadjzku4qfgs604cgur6me"
+    recipient = "wasm1ga4d4tsxrk6na6ehttwvdfmn2ejy4gwfxpt2m7"
+    amount    = "1000"
+    denom     = "ustake"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://127.0.0.1:6000/aml-check" `
+                  -Method Post `
+                  -Headers @{ "Content-Type" = "application/json" } `
+                  -Body $body
 ```
 
 ---
 
-## 🧠 How the ML Model Works
+## 🛠 MCP Integration
 
-1. **Graph Construction**  
-   Transactions are ingested into a wallet graph (using `graph_builder.py`). Nodes represent wallets and edges represent transactions.
+The AML Wallet Graph MCP server exposes tools that can be used from ChatGPT/Claude or any MCP-compatible client.
 
-2. **Feature Extraction**  
-   Each wallet node is enriched with features such as transaction frequency, amounts, counterparty diversity, and graph centrality.
+### Setup & Start MCP
 
-3. **Model Training**  
-   The ML model (Graph Neural Network / DNN) is trained on labeled data to classify wallets as **low risk, medium risk, or high risk**.
+1. Ensure `wallet_graph.pkl` from `code\wallet-Graph` is copied into the MCP folder (`code\mcp-layer`) **before starting**.
+2. Start the MCP server (Claude config example):
 
-4. **AML Oracle Flow**  
-   - The smart contract requests an AML check on transfer.  
-   - The Oracle fetches features, queries the ML model + sanctions lists, and returns a **risk classification**.  
-   - The decision is stored on-chain and can block or flag suspicious transfers.
+```json
+{
+  "mcpServers": {
+    "AML-Wallet-Graph-MCP": {
+      "command": "D:\\GitHub\\Team4-CosmBlockchain\\code\\oracle-service\\venv\\Scripts\\python.exe",
+      "args": [
+        "-m",
+        "uv",
+        "run",
+        "--with",
+        "mcp[cli]",
+        "mcp",
+        "run",
+        "D:\\GitHub\\Team4-CosmBlockchain\\code\\mcp-layer\\aml_mcp.py"
+      ]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+1. **`db_schema()`** → Returns the database schema (tables and columns).
+2. **`db_query(sql: str)`** → Run any SQL query on the AML database; returns results as JSON.
+3. **`build_wallet_graph(wallet_id: str, max_hops: int = 2, output_file: str = "wallet_subgraph.html")`** → Extracts a subgraph for a wallet and generates an interactive HTML visualization.
+
+You can test MCP tools from ChatGPT or Claude once the server is running by invoking queries like `db_schema()` or `build_wallet_graph(wallet_id='wasm1...')`.
 
 ---
 
 ## ✅ Summary
 
-This extended system combines:
-- Blockchain smart contracts for transaction monitoring.
-- An **Oracle Service** to bridge AML APIs and the blockchain.
-- A **Scheduler** to keep sanctions lists and heuristic checks updated.
-- **Graph Analytics** for wallet clustering and ML-based anomaly detection.
+This system combines:
 
----
+* Blockchain smart contracts for transaction monitoring.
+* An **Oracle Service** bridging AML APIs and the blockchain.
+* **Scheduler** to update sanctions lists and heuristics continuously.
+* **Graph Analytics** for wallet clustering and ML anomaly detection.
+* **MCP server** for programmatic access to AML data and wallet subgraphs.
