@@ -134,7 +134,7 @@ The AML system uses a **Graph Neural Network (GNN) / DNN** for risk classificati
 * Historical risk score aggregation
 
 ### Model Workflow
-
+![alt text]()
 1. Load transaction graph from database.
 2. Extract node features and construct adjacency matrix.
 3. Train GNN/DNN on labeled historical data.
