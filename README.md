@@ -10,6 +10,7 @@ This project is an **end-to-end AML monitoring system** for blockchain transacti
 This ensures continuous monitoring and supports both automated and human-led compliance workflows.
 
 This README.md is a high level overview of the system. If you require more details, find them in architecture/arch/solution.pptx
+
 The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration.
 
 ---
