@@ -114,7 +114,7 @@ This generates an interactive graph where:
 * **Edges** represent transactions, with attributes such as amount and timestamp.
 * Neighborhood subgraphs can be generated to explore wallet connections up to N hops.
 
-![Graph Structure](architecture/arch/Graph.png)
+![Graph Structure](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Graph.png)
 
 The full transaction graph is stored in `wallet_graph.pkl` and can be used by the MCP server to generate subgraphs on demand.
 
@@ -134,18 +134,17 @@ The AML system uses a **Graph Neural Network (GNN) / DNN** for risk classificati
 * Historical risk score aggregation
 
 ### Model Workflow
-
+![Architecture](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Architecture.png)
 1. Load transaction graph from database.
 2. Extract node features and construct adjacency matrix.
 3. Train GNN/DNN on labeled historical data.
 4. Evaluate and classify wallets as **low, medium, or high risk**.
 5. Store predictions in database for the AML oracle to use in decision-making.
 
-![ML & Graph Architecture](architecture/arch/Architecture.png)
 
 ### Transaction Flow
 
-![Transaction Flow](architecture/arch/TransactionFlow.png)
+![Transaction Flow](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/TransactionFlow.png)
 
 This flow shows how a transfer request triggers an AML check, how the oracle queries the ML model and sanctions lists, and how the response is written back on-chain.
 
