@@ -5,13 +5,15 @@ This project is an **end-to-end AML monitoring system** for blockchain transacti
 1. Receives a transfer request from a smart contract.
 2. Performs automated AML checks via the Oracle and AML server (including sanctions list checks, heuristic analyses, and ML-based risk scoring).
 3. Stores transaction and wallet information in a database.
-4. Allows humans to analyze wallet and subgraph data using interactive graph visualizations and MCP tools to detect potential high-risk or suspicious activity.
+4. Allows support/data-analysts to analyze wallet and subgraph data using interactive graph visualizations and MCP tools to detect potential high-risk or suspicious activity.
 
 This ensures continuous monitoring and supports both automated and human-led compliance workflows.
 
 This README.md is a high level overview of the system. If you require more details, find them in artifacts/arch/solution.pptx
 
 The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration. Use the above repo to follow for the initial setup. Refer to this only once the blockchain is up and running, and adding the smart contract. Post that, from the oracle-service setup, refer to this.
+
+Run the below setup sequentially to have everything running correctly.
 
 ---
 
@@ -67,7 +69,7 @@ for flagged in tqdm(flagged_nodes, desc="Propagating from flagged wallets"):
         incremental_risk = MAX_RISK / dist
         risk_scores[node] = min(MAX_RISK, risk_scores.get(node,0) + incremental_risk)
 ```
-
+![Graph](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/artifacts/arch/Graph.png)
 This step spreads risk scores across the graph but can take **many hours** during the initial build.  
 
 👉 To speed up setup, you may **comment out this block** in `graph_builder.py`.
@@ -189,7 +191,7 @@ This flow shows how a transfer request triggers an AML check, how the oracle que
 ---
 
 ## 🧪 Smart Contract Testing (CosmWasm)
-
+Run the next two jsons on the execute entry in cosmwasm.
 ### Request Transfer
 
 ```json
@@ -203,6 +205,8 @@ This flow shows how a transfer request triggers an AML check, how the oracle que
   }
 }
 ```
+
+You can monitor the logs of the oracle-service to see the polling in action, or run the below two responses to see how the blockchain handles different AML check responses differently.
 
 ### Oracle Response
 
