@@ -11,7 +11,7 @@ This ensures continuous monitoring and supports both automated and human-led com
 
 This README.md is a high level overview of the system. If you require more details, find them in architecture/arch/solution.pptx
 
-The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration.
+The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration. Use the above repo to follow for the initial setup. Refer to this only once the blockchain is up and running.
 
 ---
 
