@@ -13,6 +13,8 @@ This README.md is a high level overview of the system. If you require more detai
 
 The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration. Use the above repo to follow for the initial setup. Refer to this only once the blockchain is up and running, and adding the smart contract. Post that, from the oracle-service setup, refer to this.
 
+Run the below setup sequentially to have everything running correctly.
+
 ---
 
 ## 📂 Database Setup
@@ -203,6 +205,8 @@ Run the next two jsons on the execute entry in cosmwasm.
   }
 }
 ```
+
+You can monitor the logs of the oracle-service to see the polling in action, or run the below two responses to see how the blockchain handles differnt AML check responses differently.
 
 ### Oracle Response
 
