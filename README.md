@@ -103,6 +103,8 @@ Start the oracle service:
 
 ```powershell
 cd code\src\oracle-service
+npm install @cosmjs/proto-signing @cosmjs/cosmwasm-stargate @cosmjs/amino @cosmjs/stargate axios dotenv
+npm install --save-dev @types/node @types/axios @types/dotenv
 npx ts-node src/index.ts
 ```
 
