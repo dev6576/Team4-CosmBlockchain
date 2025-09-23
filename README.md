@@ -85,7 +85,7 @@ This will launch a server on `http://127.0.0.1:6000/aml-check` where AML verific
 We use **APScheduler** to run periodic heuristic and sanctions checks. The scheduler can be started manually:
 
 ```powershell
-python code\data-helper\python-scripts\scheduler.py
+python code\src\data-helper\python-scripts\scheduler.py
 ```
 
 ### Scheduled Tasks
