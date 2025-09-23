@@ -11,7 +11,7 @@ This ensures continuous monitoring and supports both automated and human-led com
 
 This README.md is a high level overview of the system. If you require more details, find them in architecture/arch/solution.pptx
 
-The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration. Use the above repo to follow for the initial setup. Refer to this only once the blockchain is up and running.
+The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration. Use the above repo to follow for the initial setup. Refer to this only once the blockchain is up and running, and adding the smart contract. Post that, from the oracle-service setup, refer to this.
 
 ---
 
@@ -97,7 +97,7 @@ The full transaction graph is stored in `wallet_graph.pkl` and can be used by th
 
 ## 🔗 Oracle Service
 
-The oracle service listens for events on-chain (e.g., AML check requests) and responds back with a risk decision.
+The oracle service listens for events on-chain (e.g., AML check requests) and responds back with a risk decision. Make suer to update tge .env with the correct wallet address.
 
 Start the oracle service:
 
@@ -108,21 +108,11 @@ npx ts-node src/index.ts
 
 ---
 
-## 🧪 AML Check Server
 
-The AML check server handles direct AML verification requests via REST API.
-
-Start the AML check server:
-
-```powershell
-python code\src\oracle-service\aml_check.py
-```
-
-This will launch a server on `http://127.0.0.1:6000/aml-check` where AML verification requests can be sent.
-
----
 
 ## 🕒 Scheduler Service
+
+This is not needed for a test, it's required if you're running this system over a long period of time so that data does not become stale.
 
 We use **APScheduler** to run periodic heuristic and sanctions checks. The scheduler can be started manually:
 
@@ -168,6 +158,19 @@ The current model has a risk score of 98.04%
 4. Evaluate and classify wallets as **low, medium, or high risk**.
 5. Store predictions in database for the AML oracle to use in decision-making.
 
+## 🧪 AML Check Server
+
+The AML check server handles direct AML verification requests via REST API.
+
+Start the AML check server:
+
+```powershell
+python code\src\oracle-service\aml_check.py
+```
+
+This will launch a server on `http://127.0.0.1:6000/aml-check` where AML verification requests can be sent.
+
+---
 
 ### Transaction Flow
 
