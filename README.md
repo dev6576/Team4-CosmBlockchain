@@ -189,7 +189,7 @@ This flow shows how a transfer request triggers an AML check, how the oracle que
 ---
 
 ## 🧪 Smart Contract Testing (CosmWasm)
-
+Run the next two jsons on the execute entry in cosmwasm.
 ### Request Transfer
 
 ```json
