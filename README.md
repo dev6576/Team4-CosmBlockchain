@@ -60,7 +60,7 @@ The oracle service listens for events on-chain (e.g., AML check requests) and re
 Start the oracle service:
 
 ```powershell
-cd code\oracle-service
+cd code\src\oracle-service
 npx ts-node src/index.ts
 ```
 
@@ -73,7 +73,7 @@ The AML check server handles direct AML verification requests via REST API.
 Start the AML check server:
 
 ```powershell
-python code\oracle-service\aml_check.py
+python code\src\oracle-service\aml_check.py
 ```
 
 This will launch a server on `http://127.0.0.1:6000/aml-check` where AML verification requests can be sent.
@@ -107,7 +107,7 @@ The scheduler ensures the AML system is continuously updated with the latest heu
 To visualize the wallet transaction graph, run:
 
 ```powershell
-python code\wallet-Graph\graph_builder.py
+python code\src\wallet-Graph\graph_builder.py
 ```
 
 This generates an interactive graph where:
@@ -238,14 +238,14 @@ The AML Wallet Graph MCP server exposes tools that can be used from ChatGPT/Clau
 
 ### Setup & Start MCP
 
-1. Ensure `wallet_graph.pkl` from `code\wallet-Graph` is copied into the MCP folder (`code\mcp-layer`) **before starting**.
+1. Ensure `wallet_graph.pkl` from `code\src\wallet-Graph` is copied into the MCP folder (`code\src\mcp-layer`) **before starting**.
 2. Start the MCP server (Claude config example):
 
 ```json
 {
   "mcpServers": {
     "AML-Wallet-Graph-MCP": {
-      "command": "D:\\GitHub\\Team4-CosmBlockchain\\code\\oracle-service\\venv\\Scripts\\python.exe",
+      "command": "D:\\GitHub\\Team4-CosmBlockchain\\code\\src\\oracle-service\\venv\\Scripts\\python.exe",
       "args": [
         "-m",
         "uv",
@@ -254,7 +254,7 @@ The AML Wallet Graph MCP server exposes tools that can be used from ChatGPT/Clau
         "mcp[cli]",
         "mcp",
         "run",
-        "D:\\GitHub\\Team4-CosmBlockchain\\code\\mcp-layer\\aml_mcp.py"
+        "D:\\GitHub\\Team4-CosmBlockchain\\code\\src\\mcp-layer\\aml_mcp.py"
       ]
     }
   }
