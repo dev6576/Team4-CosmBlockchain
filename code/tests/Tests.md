@@ -106,3 +106,4 @@ The AML Wallet Graph MCP server exposes tools that can be used from ChatGPT/Clau
   }
 }
 ```
+The tests for the mcp are manual, so interact with the agent to ask wallet information, generate graph, etc.
