@@ -69,7 +69,7 @@ for flagged in tqdm(flagged_nodes, desc="Propagating from flagged wallets"):
         incremental_risk = MAX_RISK / dist
         risk_scores[node] = min(MAX_RISK, risk_scores.get(node,0) + incremental_risk)
 ```
-
+![Graph](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/artifacts/arch/Graph.png)
 This step spreads risk scores across the graph but can take **many hours** during the initial build.  
 
 👉 To speed up setup, you may **comment out this block** in `graph_builder.py`.
