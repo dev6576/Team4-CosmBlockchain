@@ -165,6 +165,12 @@ The current model has an accuracy score of 98.04%
 Run this:
 
 ```powershell
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install torch-geometric
+pip install scikit-learn
+pip install tqdm
+pip install numpy
+pip install networkx
 python code\src\ml-layer\ml_model.py
 ```
 
