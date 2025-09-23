@@ -53,6 +53,26 @@ pip install flask fastmcp psycopg2 networkx pyvis apscheduler
 
 ---
 
+## 📊 Graph Visualization
+
+To visualize the wallet transaction graph, run:
+
+```powershell
+python code\src\wallet-Graph\graph_builder.py
+```
+
+This generates an interactive graph where:
+
+* **Nodes** represent wallets. Node color indicates risk: purple = root wallet, red = high risk, blue = low risk.
+* **Edges** represent transactions, with attributes such as amount and timestamp.
+* Neighborhood subgraphs can be generated to explore wallet connections up to N hops.
+
+![Graph Structure](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Graph.png)
+
+The full transaction graph is stored in `wallet_graph.pkl` and can be used by the MCP server to generate subgraphs on demand.
+
+---
+
 ## 🔗 Oracle Service
 
 The oracle service listens for events on-chain (e.g., AML check requests) and responds back with a risk decision.
@@ -102,25 +122,6 @@ The scheduler ensures the AML system is continuously updated with the latest heu
 
 ---
 
-## 📊 Graph Visualization
-
-To visualize the wallet transaction graph, run:
-
-```powershell
-python code\src\wallet-Graph\graph_builder.py
-```
-
-This generates an interactive graph where:
-
-* **Nodes** represent wallets. Node color indicates risk: purple = root wallet, red = high risk, blue = low risk.
-* **Edges** represent transactions, with attributes such as amount and timestamp.
-* Neighborhood subgraphs can be generated to explore wallet connections up to N hops.
-
-![Graph Structure](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Graph.png)
-
-The full transaction graph is stored in `wallet_graph.pkl` and can be used by the MCP server to generate subgraphs on demand.
-
----
 
 ## 🧠 ML Layer
 
