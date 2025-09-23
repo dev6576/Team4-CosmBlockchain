@@ -11,7 +11,7 @@ This ensures continuous monitoring and supports both automated and human-led com
 
 This README.md is a high level overview of the system. If you require more details, find them in architecture/arch/solution.pptx
 
-The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration.
+The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration. Use the above repo to follow for the initial setup. Refer to this only once the blockchain is up and running.
 
 ---
 
@@ -50,6 +50,26 @@ docker exec -i postgres_new psql -U postgres -d aml_db -f /create_flagged_wallet
 ```bash
 pip install flask fastmcp psycopg2 networkx pyvis apscheduler
 ```
+
+---
+
+## 📊 Graph Visualization
+
+To visualize the wallet transaction graph, run:
+
+```powershell
+python code\src\wallet-Graph\graph_builder.py
+```
+
+This generates an interactive graph where:
+
+* **Nodes** represent wallets. Node color indicates risk: purple = root wallet, red = high risk, blue = low risk.
+* **Edges** represent transactions, with attributes such as amount and timestamp.
+* Neighborhood subgraphs can be generated to explore wallet connections up to N hops.
+
+![Graph Structure](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Graph.png)
+
+The full transaction graph is stored in `wallet_graph.pkl` and can be used by the MCP server to generate subgraphs on demand.
 
 ---
 
@@ -102,25 +122,6 @@ The scheduler ensures the AML system is continuously updated with the latest heu
 
 ---
 
-## 📊 Graph Visualization
-
-To visualize the wallet transaction graph, run:
-
-```powershell
-python code\src\wallet-Graph\graph_builder.py
-```
-
-This generates an interactive graph where:
-
-* **Nodes** represent wallets. Node color indicates risk: purple = root wallet, red = high risk, blue = low risk.
-* **Edges** represent transactions, with attributes such as amount and timestamp.
-* Neighborhood subgraphs can be generated to explore wallet connections up to N hops.
-
-![Graph Structure](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Graph.png)
-
-The full transaction graph is stored in `wallet_graph.pkl` and can be used by the MCP server to generate subgraphs on demand.
-
----
 
 ## 🧠 ML Layer
 
