@@ -9,7 +9,7 @@ This project is an **end-to-end AML monitoring system** for blockchain transacti
 
 This ensures continuous monitoring and supports both automated and human-led compliance workflows.
 
-This README.md is a high level overview of the system. If you require more details, find them in architecture/arch/solution.pptx
+This README.md is a high level overview of the system. If you require more details, find them in artifacts/arch/solution.pptx
 
 The project is based on [wfblockchain/wfHackathon](https://github.com/wfblockchain/wfHackathon), but extended with AML checks, an oracle service, a data-helper scheduler system, graph visualization tools, and MCP integration. Use the above repo to follow for the initial setup. Refer to this only once the blockchain is up and running, and adding the smart contract. Post that, from the oracle-service setup, refer to this.
 
@@ -97,12 +97,14 @@ The full transaction graph is stored in `wallet_graph.pkl` and can be used by th
 
 ## 🔗 Oracle Service
 
-The oracle service listens for events on-chain (e.g., AML check requests) and responds back with a risk decision. Make suer to update tge .env with the correct wallet address.
+The oracle service listens for events on-chain (e.g., AML check requests) and responds back with a risk decision. Be sure to update the .env with the correct wallet address.
 
 Start the oracle service:
 
 ```powershell
 cd code\src\oracle-service
+npm install @cosmjs/proto-signing @cosmjs/cosmwasm-stargate @cosmjs/amino @cosmjs/stargate axios dotenv
+npm install --save-dev @types/node @types/axios @types/dotenv
 npx ts-node src/index.ts
 ```
 
@@ -151,12 +153,18 @@ The AML system uses a **Graph Neural Network (GNN) / DNN** for risk classificati
 The current model has a risk score of 98.04%
 
 ### Model Workflow
-![Architecture](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Architecture.png)
+![Architecture](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/artifacts/arch/Architecture.png)
 1. Load transaction graph from database.
 2. Extract node features and construct adjacency matrix.
 3. Train GNN/DNN on labeled historical data.
 4. Evaluate and classify wallets as **low, medium, or high risk**.
 5. Store predictions in database for the AML oracle to use in decision-making.
+
+Run this:
+
+```powershell
+python code\src\ml-layer\ml_model.py
+```
 
 ## 🧪 AML Check Server
 
@@ -174,7 +182,7 @@ This will launch a server on `http://127.0.0.1:6000/aml-check` where AML verific
 
 ### Transaction Flow
 
-![Transaction Flow](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/TransactionFlow.png)
+![Transaction Flow](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/artifacts/arch/TransactionFlow.png)
 
 This flow shows how a transfer request triggers an AML check, how the oracle queries the ML model and sanctions lists, and how the response is written back on-chain.
 
