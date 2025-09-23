@@ -53,31 +53,7 @@ pip install flask fastmcp psycopg2 networkx pyvis apscheduler
 
 ---
 
-# 📊 Graph Visualization
-
-⚠️ **Important Note on First-Time Setup**  
-By default, `graph_builder.py` includes **risk propagation** logic:
-
-```python
-for flagged in tqdm(flagged_nodes, desc="Propagating from flagged wallets"):
-    lengths = nx.single_source_shortest_path_length(G.to_undirected(), flagged, cutoff=3)
-    for node, dist in lengths.items():
-        if node in flagged_nodes:
-            continue
-        incremental_risk = MAX_RISK / dist
-        risk_scores[node] = min(MAX_RISK, risk_scores.get(node,0) + incremental_risk)
-```
-
-This step spreads risk scores across the graph but can take **many hours** during the initial build.  
-
-👉 To speed up setup, you may **comment out this block** in `graph_builder.py`.
-
-- **With propagation** → realistic risk scoring, but **very slow** (can take hours for initial setup).  
-- **Without propagation** → graph builds in **minutes**, but no propagated risks.
-
----
-
-## Run the Graph Builder
+## 📊 Graph Visualization
 
 To visualize the wallet transaction graph, run:
 
@@ -90,6 +66,8 @@ This generates an interactive graph where:
 * **Nodes** represent wallets. Node color indicates risk: purple = root wallet, red = high risk, blue = low risk.
 * **Edges** represent transactions, with attributes such as amount and timestamp.
 * Neighborhood subgraphs can be generated to explore wallet connections up to N hops.
+
+![Graph Structure](https://github.com/dev6576/Team4-CosmBlockchain/blob/main/architecture/arch/Graph.png)
 
 The full transaction graph is stored in `wallet_graph.pkl` and can be used by the MCP server to generate subgraphs on demand.
 
