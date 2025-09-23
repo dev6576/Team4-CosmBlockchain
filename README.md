@@ -97,7 +97,7 @@ The full transaction graph is stored in `wallet_graph.pkl` and can be used by th
 
 ## 🔗 Oracle Service
 
-The oracle service listens for events on-chain (e.g., AML check requests) and responds back with a risk decision. Make suer to update tge .env with the correct wallet address.
+The oracle service listens for events on-chain (e.g., AML check requests) and responds back with a risk decision. Be sure to update the .env with the correct wallet address.
 
 Start the oracle service:
 
