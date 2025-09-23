@@ -160,6 +160,12 @@ The current model has a risk score of 98.04%
 4. Evaluate and classify wallets as **low, medium, or high risk**.
 5. Store predictions in database for the AML oracle to use in decision-making.
 
+Run this:
+
+```powershell
+python code\src\ml-layer\ml_model.py
+```
+
 ## 🧪 AML Check Server
 
 The AML check server handles direct AML verification requests via REST API.
