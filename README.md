@@ -206,7 +206,7 @@ Run the next two jsons on the execute entry in cosmwasm.
 }
 ```
 
-You can monitor the logs of the oracle-service to see the polling in action, or run the below two responses to see how the blockchain handles differnt AML check responses differently.
+You can monitor the logs of the oracle-service to see the polling in action, or run the below two responses to see how the blockchain handles different AML check responses differently.
 
 ### Oracle Response
 
