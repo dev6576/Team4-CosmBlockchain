@@ -5,7 +5,7 @@ This project is an **end-to-end AML monitoring system** for blockchain transacti
 1. Receives a transfer request from a smart contract.
 2. Performs automated AML checks via the Oracle and AML server (including sanctions list checks, heuristic analyses, and ML-based risk scoring).
 3. Stores transaction and wallet information in a database.
-4. Allows humans to analyze wallet and subgraph data using interactive graph visualizations and MCP tools to detect potential high-risk or suspicious activity.
+4. Allows support/data-analysts to analyze wallet and subgraph data using interactive graph visualizations and MCP tools to detect potential high-risk or suspicious activity.
 
 This ensures continuous monitoring and supports both automated and human-led compliance workflows.
 
